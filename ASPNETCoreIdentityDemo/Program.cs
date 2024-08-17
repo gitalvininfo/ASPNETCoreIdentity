@@ -20,6 +20,13 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
                     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    // If the LoginPath isn't set, ASP.NET Core defaults the path to /Account/Login.
+    options.LoginPath = "/Account/Login"; // Set your login path here
+});
+
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 

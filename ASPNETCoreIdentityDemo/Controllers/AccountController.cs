@@ -26,8 +26,9 @@ namespace ASPNETCoreIdentityDemo.Controllers
         }
 
         [HttpGet]
-        public IActionResult Login()
+        public IActionResult Login(string? ReturnUrl = null)
         {
+            ViewData["ReturnUrl"] = ReturnUrl;
             return View();
         }
 
@@ -63,7 +64,7 @@ namespace ASPNETCoreIdentityDemo.Controllers
 
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> Login(LoginViewModel model)
+        public async Task<IActionResult> Login(LoginViewModel model, string? ReturnUrl)
         {
             if (ModelState.IsValid)
             {
@@ -71,6 +72,12 @@ namespace ASPNETCoreIdentityDemo.Controllers
 
                 if (result.Succeeded)
                 {
+
+                    if(!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
+                    {
+                        return Redirect(ReturnUrl);
+                    }
+
                     // Handle successful login
                     return RedirectToAction(nameof(HomeController.Index), "Home");
                 }
