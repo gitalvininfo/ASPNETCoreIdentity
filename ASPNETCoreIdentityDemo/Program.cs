@@ -33,9 +33,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("DeleteRolePolicy",
-        policy => policy.RequireClaim("Delete Role")
-        .RequireClaim("Create Role"));
+    options.AddPolicy("EditRolePolicy", policy => policy.RequireClaim("Edit Role"));
+    options.AddPolicy("DeleteRolePolicy", policy => policy.RequireClaim("Delete Role"));
 });
 
 var app = builder.Build();
