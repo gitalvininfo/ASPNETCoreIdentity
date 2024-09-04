@@ -71,7 +71,7 @@ namespace ASPNETCoreIdentityDemo.Controllers
         public async Task<IActionResult> EditRole(string roleId)
         {
             //First Get the role information from the database
-            ApplicationRole? role = await _roleManager.FindByIdAsync(roleId);
+            ApplicationRole role = await _roleManager.FindByIdAsync(roleId);
             if (role == null)
             {
                 // Handle the scenario when the role is not found
@@ -83,10 +83,17 @@ namespace ASPNETCoreIdentityDemo.Controllers
             {
                 Id = role.Id,
                 RoleName = role.Name,
-                Description = role.Description,
-                Users = new List<string>()
+                Description = role.Description
                 // You can add other properties here if needed
             };
+
+            //Initialize the Users and Claims Property to avoid Null Reference Exception while Add the user name
+            model.Users = new List<string>();
+            model.Claims = new List<string>();
+
+            // Gets a list of claims associated with the specified role.
+            var roleClaims = await _roleManager.GetClaimsAsync(role);
+            model.Claims = roleClaims.Select(c => c.Value).ToList();
 
             // Retrieve all the Users
             foreach (var user in _userManager.Users.ToList())
@@ -557,6 +564,112 @@ namespace ASPNETCoreIdentityDemo.Controllers
             }
 
             return RedirectToAction("EditUser", new { UserId = model.UserId });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ManageRoleClaims(string RoleId)
+        {
+            //First, fetch the Role Details Based on the RoleId
+            var role = await _roleManager.FindByIdAsync(RoleId);
+
+            if (role == null)
+            {
+                //handle if the role is not Exists in the database
+                ViewBag.ErrorMessage = $"Role with Id = {RoleId} cannot be found";
+                return View("NotFound");
+            }
+
+            //Storing the Role Name in the ViewBag for Display Purpose
+            ViewBag.RoleName = role.Name;
+
+            //Create RoleClaimsViewModel Instance
+            var model = new RoleClaimsViewModel
+            {
+                RoleId = RoleId
+            };
+
+            // RoleManager service GetClaimsAsync method gets all the current claims of the role
+            var existingRoleClaims = await _roleManager.GetClaimsAsync(role);
+
+            // Loop through each claim we have in our application
+            // Call the GetAllClaims Static Method ClaimsStore Class
+            foreach (Claim claim in ClaimsStore.GetAllClaims())
+            {
+                //Create an Instance of RoleClaim class
+                RoleClaim roleClaim = new RoleClaim
+                {
+                    ClaimType = claim.Type
+                };
+
+                // If the Role has the claim, set IsSelected property to true, so the checkbox
+                // next to the claim is checked on the UI
+                if (existingRoleClaims.Any(c => c.Type == claim.Type))
+                {
+                    roleClaim.IsSelected = true;
+                }
+                //By default, the IsSelected is False, no need to set as false
+
+                //Add the roleClaim to RoleClaimsViewModel Instance 
+                model.Claims.Add(roleClaim);
+            }
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ManageRoleClaims(RoleClaimsViewModel model)
+        {
+            //First fetch the Role Details
+            var role = await _roleManager.FindByIdAsync(model.RoleId);
+
+            if (role == null)
+            {
+                ViewBag.ErrorMessage = $"Role with Id = {model.RoleId} cannot be found";
+                return View("NotFound");
+            }
+
+            // Get all the existing claims of the role
+            var claims = await _roleManager.GetClaimsAsync(role);
+
+
+            for (int i = 0; i < model.Claims.Count; i++)
+            {
+                Claim claim = new Claim(model.Claims[i].ClaimType, model.Claims[i].ClaimType);
+
+                IdentityResult? result;
+
+                if (model.Claims[i].IsSelected && !(claims.Any(c => c.Type == claim.Type)))
+                {
+                    //If IsSelected is true and User is not already in this role, then add the user
+                    //result = await _userManager.AddToRoleAsync(user, role.Name);
+                    result = await _roleManager.AddClaimAsync(role, claim);
+                }
+                else if (!model.Claims[i].IsSelected && claims.Any(c => c.Type == claim.Type))
+                {
+                    //If IsSelected is false and User is already in this role, then remove the user
+                    result = await _roleManager.RemoveClaimAsync(role, claim);
+                }
+                else
+                {
+                    //Don't do anything simply continue the loop
+                    continue;
+                }
+
+                //If you add or remove any user, please check the Succeeded of the IdentityResult
+                if (result.Succeeded)
+                {
+                    if (i < (model.Claims.Count - 1))
+                        continue;
+                    else
+                        return RedirectToAction("EditRole", new { roleId = model.RoleId });
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Cannot add or removed selected claims to role");
+                    return View(model);
+                }
+            }
+            return RedirectToAction("EditRole", new { roleId = model.RoleId });
         }
 
     }

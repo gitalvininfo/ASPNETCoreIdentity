@@ -13,5 +13,7 @@ namespace ASPNETCoreIdentityDemo.Models
         public string? Description { get; set; }
 
         public List<string>? Users { get; set; }
+
+        public List<string>? Claims { get; set; }
     }
 }
