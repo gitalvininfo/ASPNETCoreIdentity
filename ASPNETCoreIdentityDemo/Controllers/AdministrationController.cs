@@ -251,5 +251,12 @@ namespace ASPNETCoreIdentityDemo.Controllers
 
             return RedirectToAction("EditRole", new { roleId = roleId });
         }
+
+        [HttpGet]
+        public IActionResult ListUsers()
+        {
+            var users = _userManager.Users;
+            return View(users);
+        }
     }
 }
