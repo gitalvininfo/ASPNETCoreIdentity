@@ -31,6 +31,13 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("DeleteRolePolicy",
+        policy => policy.RequireClaim("Delete Role")
+        .RequireClaim("Create Role"));
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
